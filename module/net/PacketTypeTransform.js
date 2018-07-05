@@ -40,7 +40,7 @@ class Collection {
 
         // Attempt to auto set flag size.
         if (flagSize === undefined) {
-            flagSize = Math.ceil(fields.length/8);
+            flagSize = Math.ceil(fields.length / 8);
 
             // Note: A size of 3 is not supported so bump it up to 4 if so.
             if (flagSize === 3) {
@@ -82,7 +82,7 @@ FieldTypeReadFunction[FieldType.CHAR] = function ReadField_CHAR(chunk, position,
 FieldTypeReadFunction[FieldType.INT8] = function ReadField_INT8(chunk, position, size) {
     // TODO: Larger than 1 size.
     if (size > 1) {
-        throw new Error('Reading field type INT8 with size '+size+' is not yet implemented.');
+        throw new Error('Reading field type INT8 with size ' + size + ' is not yet implemented.');
     }
     return [chunk.readInt8(position), size];
 };
@@ -90,7 +90,7 @@ FieldTypeReadFunction[FieldType.INT8] = function ReadField_INT8(chunk, position,
 FieldTypeReadFunction[FieldType.UINT8] = function ReadField_UINT8(chunk, position, size) {
     // TODO: Larger than 1 size.
     if (size > 1) {
-        throw new Error('Reading field type UINT8 with size '+size+' is not yet implemented.');
+        throw new Error('Reading field type UINT8 with size ' + size + ' is not yet implemented.');
     }
     return [chunk.readUInt8(position), size];
 };
@@ -98,7 +98,7 @@ FieldTypeReadFunction[FieldType.UINT8] = function ReadField_UINT8(chunk, positio
 FieldTypeReadFunction[FieldType.INT16] = function ReadField_INT16(chunk, position, size) {
     // TODO: Larger than 1 size.
     if (size > 1) {
-        throw new Error('Reading field type INT16 with size '+size+' is not yet implemented.');
+        throw new Error('Reading field type INT16 with size ' + size + ' is not yet implemented.');
     }
     return [chunk.readInt16(position), size * 2];
 };
@@ -106,7 +106,7 @@ FieldTypeReadFunction[FieldType.INT16] = function ReadField_INT16(chunk, positio
 FieldTypeReadFunction[FieldType.UINT16] = function ReadField_UINT16(chunk, position, size) {
     // TODO: Larger than 1 size.
     if (size > 1) {
-        throw new Error('Reading field type UINT16 with size '+size+' is not yet implemented.');
+        throw new Error('Reading field type UINT16 with size ' + size + ' is not yet implemented.');
     }
     return [chunk.readUInt16(position), size * 2];
 };
@@ -114,7 +114,7 @@ FieldTypeReadFunction[FieldType.UINT16] = function ReadField_UINT16(chunk, posit
 FieldTypeReadFunction[FieldType.INT32] = function ReadField_INT32(chunk, position, size) {
     // TODO: Larger than 1 size.
     if (size > 1) {
-        throw new Error('Reading field type INT32 with size '+size+' is not yet implemented.');
+        throw new Error('Reading field type INT32 with size ' + size + ' is not yet implemented.');
     }
     return [chunk.readInt32(position), size * 4];
 };
@@ -122,7 +122,7 @@ FieldTypeReadFunction[FieldType.INT32] = function ReadField_INT32(chunk, positio
 FieldTypeReadFunction[FieldType.UINT32] = function ReadField_UINT32(chunk, position, size) {
     // TODO: Larger than 1 size.
     if (size > 1) {
-        throw new Error('Reading field type UINT32 with size '+size+' is not yet implemented.');
+        throw new Error('Reading field type UINT32 with size ' + size + ' is not yet implemented.');
     }
     return [chunk.readUInt32(position), size * 4];
 };
@@ -137,23 +137,23 @@ FieldTypeReadFunction[FieldType.UINT64] = function ReadField_UINT64(chunk, posit
 
 FieldTypeReadFunction[FieldType.FLOAT] = function ReadField_FLOAT(chunk, position, size) {
     if (size > 1) {
-        throw new Error('Reading field type FLOAT with size '+size+' is not yet implemented.');
+        throw new Error('Reading field type FLOAT with size ' + size + ' is not yet implemented.');
     }
     return [chunk.readFloatLE(position), size * 4];
 };
 
 FieldTypeReadFunction[FieldType.VEC3] = function ReadField_VEC3(chunk, position, size) {
     if (size > 1) {
-        throw new Error('Reading field type VEC3 with a size of '+size+' is not yet implemented.');
+        throw new Error('Reading field type VEC3 with a size of ' + size + ' is not yet implemented.');
     }
 
-    var vec3 = [chunk.readFloatLE(position),chunk.readFloatLE(position + 4), chunk.readFloatLE(position + 8)]
+    var vec3 = [chunk.readFloatLE(position), chunk.readFloatLE(position + 4), chunk.readFloatLE(position + 8)]
     return [vec3, 12 * size];
 };
 
 FieldTypeReadFunction[FieldType.MATRIX] = function ReadField_MATRIX(chunk, position, size) {
     if (size > 1) {
-        throw new Error('Reading field type MATRIX with size '+size+' is not yet implemented.');
+        throw new Error('Reading field type MATRIX with size ' + size + ' is not yet implemented.');
     }
 
     var matrix = [
@@ -172,7 +172,7 @@ FieldTypeReadFunction[FieldType.PACKET] = function ReadField_PACKET(chunk, posit
 
 FieldTypeReadFunction[FieldType.MEMORY_BLOCK] = function ReadField_MEMORY_BLOCK(chunk, position, size) {
     if (size > 1) {
-        throw new Error('Reading field type MEMORY_BLOCK with a size of '+size+' is not yet implemented.');
+        throw new Error('Reading field type MEMORY_BLOCK with a size of ' + size + ' is not yet implemented.');
     }
     var length = chunk.readUInt16LE(position);
     position += 2;
@@ -343,6 +343,8 @@ class Decoder extends Transform {
             this.collection = options.collection;
         }
 
+        this.buffer = null;
+
         this.options = options;
     }
 
@@ -368,140 +370,207 @@ class Decoder extends Transform {
             return cb(null, chunk);
         }
 
-        if (chunk.length < 6) {
-            return cb(new Error("Expecting more data in packet."));
-        }
-
-        // TODO: Remove debug.
-        console.info(hexy(chunk));
-
-        var output = {};
-
         var position = 0;
 
-        // TODO: Do something like this, maybe it should be two code paths?
-        // var [ packet, bytesRead ] = readPacket(chunk, { includeTimestamp: this.options.includeTimestamp });
-        // position += bytesRead;
+        // Restore buffered content if any.
+        if (this.buffer !== null) {
+            chunk = Buffer.concat([this.buffer, chunk]);
+            this.buffer = null;
+        }
 
-        output.packetTypeID = chunk.readUInt16LE(position);
-        position += 2;
+        var totalLength = chunk.length;
 
-        output.sessionID = chunk.readUInt32LE(position);
-        position += 4;
+        while (position < totalLength) {
+            // Keep to max size limits.
+            if (this.options.maxSize > 0 && chunk.length > this.options.maxSize) {
+                return cb(new Error('Message larger than max size allowed.'));
+            }
 
-        var expectingLength = 6;
-        if (this.options.includeTimestamp) {
-            expectingLength += 4;
-            if (chunk.length < 10) {
+            // We have a minimum size requirement of 4 bytes. (Could be 12 or 16 presumably if we didn't have empty packet and included some other fields...)
+            if (chunk.length < 4) {
+                // TODO: Retain missed counter?
+
+                // Wait for more data.
+                this.buffer = chunk;
+                return cb();
+            }
+
+            // Get the starting byte.
+            var startByte = chunk.readUInt8(position);
+            position++;
+
+            if (startByte !== 0xD6 && startByte != 0xA1 && startByte != 0xB1) {
+                return cb(new Error('Unrecognized start byte of packet frame.'));
+            }
+
+            // Read length.
+            var length = chunk.readUInt16LE(position);
+            position += 2;
+
+            if (totalLength < length) {
+                // TODO: Retain missed counter?
+
+                // Wait for more data.
+                this.buffer = chunk;
+                return cb();
+            }
+
+            var lastByte = chunk.readUInt8(position + length - 4);
+
+            // If starting with D6 ensure the last byte is 6B
+            // If starting with A1 ensure the last byte is AF
+            // If starting with B1 ensure the last byte is BF
+            if (startByte == 0xD6 && lastByte != 0x6B) {
+                return cb(new Error('Packet frame not ending in correct byte.'));
+            } else if (startByte == 0xA1 && lastByte != 0xAF) {
+                return cb(new Error('Packet frame not ending in correct byte.'));
+            } else if (startByte == 0xB1 && lastByte != 0xBF) {
+                return cb(new Error('Packet frame not ending in correct byte.'));
+            }
+
+            // Slice the data of interest, we don't care about the tail byte.
+            var data = chunk.slice(position, position + length - 4);
+
+            // Parse the packet.
+            if (data.length < 6) {
                 return cb(new Error("Expecting more data in packet."));
             }
 
-            // Can we convert timestamp into date object?
-            output.timestamp = chunk.readUInt32LE(position);
-            position += 4;
-        }
+            // TODO: Remove debug.
+            console.info(hexy(data));
 
-        // Note: Not sure if this covers all circumstances.
-        if (chunk.length < expectingLength) {
-            return cb(new Error("Expecting more data in packet."));
-        }
+            var output = {};
 
-        // Could consider this an error.
-        // But whilst in development we will just warn to console.
-        if (this.collection === null) {
-            console.warn('Collection not specified on PacketTypeTransform Decoder.');
-            return cb();
-        }
+            var dataPosition = 0;
 
-        // Store the buffer into the packet output for debug reasons.
-        output.buffer = chunk.slice(3);
+            output.packetTypeID = data.readUInt16LE(dataPosition);
+            dataPosition += 2;
 
-        // Packet Info to contain.
-        // types
-        // sizes
-        // names (optional)
-        // flagSize (can be 1, 2 or 4).
+            output.sessionID = data.readUInt32LE(dataPosition);
+            dataPosition += 4;
 
-        // The flag bits will indicate which types are present in the packet.
+            var expectingLength = 6;
+            if (this.options.includeTimestamp) {
+                expectingLength += 4;
+                if (data.length < 10) {
+                    return cb(new Error("Expecting more data in packet."));
+                }
 
-        output.flags = [];
+                // Can we convert timestamp into date object?
+                output.timestamp = data.readUInt32LE(dataPosition);
+                dataPosition += 4;
+            }
 
-        // TODO: Take this whole section and make it a function so we can use it to read embedded packets.
-        var packetInfo = this.collection.get(output.packetTypeID);
+            // Note: Not sure if this covers all circumstances.
+            if (data.length < expectingLength) {
+                return cb(new Error("Expecting more data in packet."));
+            }
 
-        // If we can not find the collection then.
-        if (packetInfo === null) {
-            // Note: In development mode it's going to be useful to output some info here.
-            console.warn("Packet Type " + output.packetTypeID + " not found.", chunk);
+            // Could consider this an error.
+            // But whilst in development we will just warn to console.
+            if (this.collection === null) {
+                console.warn('Collection not specified on PacketTypeTransform Decoder.');
+                return cb();
+            }
 
-            // TODO: Lets error?
-            //return cb(new Error('Packet Type ' + output.packetTypeID + ' not found.'));
+            // Store the buffer into the packet output for debug reasons.
+            output.buffer = data.slice(3);
 
-            // Whilst Developing, pass it on anyway as it could be handy to use the buffer to work out what the packet is...
-            return cb(null, output);
-        }
+            // Packet Info to contain.
+            // types
+            // sizes
+            // names (optional)
+            // flagSize (can be 1, 2 or 4).
 
-        if (packetInfo.flagSize === 1) {
-            output.flagValue = chunk.readUInt8(position);
-            position ++;
-        } else if (packetInfo.flagSize === 2) {
-            output.flagValue = chunk.readUInt16LE(position);
-            position += 2;
-        } else if (packetInfo.flagSize === 4) {
-            output.flagValue = chunk.readUInt32LE(position);
-            position += 4;
-        }
+            // The flag bits will indicate which types are present in the packet.
 
-        // TODO: Can probably move these checks into the collection add method?
-        if (packetInfo.fields.length > 32) {
-            return cb(new Error("Too many types present, must fit into 8, 16 or 32 bits."));
-        }
+            output.flags = [];
 
-        output.info = packetInfo;
-        output.content = {};
+            // TODO: Take this whole section and make it a function so we can use it to read embedded packets.
+            var packetInfo = this.collection.get(output.packetTypeID);
 
-        if (output.flagValue) {
-            for (var i = 0; i < packetInfo.fields.length; i++) {
+            // If we can not find the collection then.
+            if (packetInfo === null) {
+                // Note: In development mode it's going to be useful to output some info here.
+                console.warn("Packet Type " + output.packetTypeID + " not found.", data);
 
-                // Bit Index & Mask
-                // Note: Can be obtained by 1 << index
-                // This presumably gives us a max of 32 fields in a packet?
-                // But the blocks can be embedded inside each other actually.
-                var mask = 1 << i;
-                output.flags[i] = (output.flagValue & mask)
+                // TODO: Lets error?
+                //return cb(new Error('Packet Type ' + output.packetTypeID + ' not found.'));
 
-                if (output.flags[i]) {
-                    try {
-                        // TODO: Handle array / var length?
-                        // For each type present, read it from the packet.
-                        var fieldType = packetInfo.fields[i];
-                        var readFieldFunction = FieldTypeReadFunction[fieldType];
-                        if (readFieldFunction === undefined) {
-                            console.info("Field Type " + fieldType + " read is not implemented.");
-                            return cb(new Error("Reading field type " + fieldType + " is not implemented."));
+                // Whilst Developing, pass it on anyway as it could be handy to use the buffer to work out what the packet is...
+                return cb(null, output);
+            }
+
+            if (packetInfo.flagSize === 1) {
+                output.flagValue = data.readUInt8(dataPosition);
+                dataPosition++;
+            } else if (packetInfo.flagSize === 2) {
+                output.flagValue = data.readUInt16LE(dataPosition);
+                dataPosition += 2;
+            } else if (packetInfo.flagSize === 4) {
+                output.flagValue = data.readUInt32LE(dataPosition);
+                dataPosition += 4;
+            }
+
+            // TODO: Can probably move these checks into the collection add method?
+            if (packetInfo.fields.length > 32) {
+                return cb(new Error("Too many types present, must fit into 8, 16 or 32 bits."));
+            }
+
+            output.info = packetInfo;
+            output.content = {};
+
+            if (output.flagValue) {
+                for (var i = 0; i < packetInfo.fields.length; i++) {
+
+                    // Bit Index & Mask
+                    // Note: Can be obtained by 1 << index
+                    // This presumably gives us a max of 32 fields in a packet?
+                    // But the blocks can be embedded inside each other actually.
+                    var mask = 1 << i;
+                    output.flags[i] = (output.flagValue & mask)
+
+                    if (output.flags[i]) {
+                        try {
+                            // TODO: Handle array / var length?
+                            // For each type present, read it from the packet.
+                            var fieldType = packetInfo.fields[i];
+                            var readFieldFunction = FieldTypeReadFunction[fieldType];
+                            if (readFieldFunction === undefined) {
+                                console.info("Field Type " + fieldType + " read is not implemented.");
+                                return cb(new Error("Reading field type " + fieldType + " is not implemented."));
+                            }
+
+                            var [value, bytesRead] = readFieldFunction(chunk, dataPosition, packetInfo.sizes[i]);
+
+                            // Set field name in content if present.
+                            var fieldName = packetInfo.names[i];
+                            if (fieldName !== undefined) {
+                                output.content[fieldName] = value;
+                            } else {
+                                // Just set it by index since we don't know the field name.
+                                // We hope to recover all field names if possible.
+                                output.content[i] = value;
+                            }
+
+                            dataPosition += bytesRead;
+                        } catch (e) {
+                            return cb(e);
                         }
-                        
-                        var [value, bytesRead] = readFieldFunction(chunk, position, packetInfo.sizes[i]);
-
-                        // Set field name in content if present.
-                        var fieldName = packetInfo.names[i];
-                        if (fieldName !== undefined) {
-                            output.content[fieldName] = value;
-                        } else {
-                            // Just set it by index since we don't know the field name.
-                            // We hope to recover all field names if possible.
-                            output.content[i] = value;
-                        }
-
-                        position += bytesRead;
-                    } catch (e) {
-                        return cb(e);
                     }
                 }
             }
+
+            // Push the parsed packet along.
+            this.push(output);
+
+
+
+            // Skip over rest of data to next packet if present.
+            position += length - 3;
         }
 
-        cb(null, output);
+        cb();
     }
 }
 
@@ -536,7 +605,7 @@ class PacketWriter {
 
         // If we can not find the collection then.
         if (packetInfo === null) {
-            throw new Error('Packet info not found for PacketTypeID: '+packetTypeID);
+            throw new Error('Packet info not found for PacketTypeID: ' + packetTypeID);
         }
 
         var position = 0;
@@ -573,7 +642,7 @@ class PacketWriter {
         position += packetInfo.flagSize;
 
         var flagValue = 0;
-        
+
         for (var i = 0; i < packetInfo.fields.length; i++) {
 
             // Bit Index & Mask
@@ -612,7 +681,7 @@ class PacketWriter {
 
         // Write the flag byte(s).
         if (packetInfo.flagSize === 1) {
-            this.writeBuffer.writeUInt8(flagValue, flagPosition);            
+            this.writeBuffer.writeUInt8(flagValue, flagPosition);
         } else if (packetInfo.flagSize === 2) {
             this.writeBuffer.writeUInt16LE(flagValue, flagPosition);
         } else if (packetInfo.flagSize === 4) {
@@ -637,9 +706,9 @@ class PacketWriter {
         // Set any packet increment or session id correctly.
         // Encrypt the buffer and copy contents from the cipher output.
 
-        
+
         buffer.writeUInt8(0xD6, 0);
-        
+
         buffer.writeUInt32LE(0, 5);
 
         var position = 9;
@@ -658,7 +727,7 @@ class PacketWriter {
         // //Buffer.concat(cipher.update(data),cipher.final())
         // //var data = cipher.update(new Buffer(8));
         // console.log("Length: "+data.length+"\n"+hexy(data));
-        
+
 
         // Handle any remaining length with padding to make up a block size of 8.
         var remaining = size % 8;
