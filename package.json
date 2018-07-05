@@ -1,0 +1,30 @@
+{
+  "name": "emulord",
+  "version": "1.0.0",
+  "description": "EmuLord\r =======",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bluebird": "^3.5.1",
+    "fast-csv": "^2.4.1",
+    "fast-xml-parser": "^3.11.1",
+    "hexy": "^0.2.11",
+    "hotter-require": "^1.1.11",
+    "pg-promise": "^8.4.4",
+    "pino": "^4.17.3",
+    "random-js": "^1.0.8",
+    "uuid": "^3.3.2"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.1.4",
+    "@types/mocha": "^5.2.2",
+    "chai": "^4.1.2",
+    "mocha": "^5.2.0",
+    "ts-node": "^6.1.1",
+    "typescript": "^2.9.2"
+  }
+}
